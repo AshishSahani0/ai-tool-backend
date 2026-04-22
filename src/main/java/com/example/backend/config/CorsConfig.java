@@ -1,9 +1,9 @@
 package com.example.backend.config;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class CorsConfig {
@@ -15,6 +15,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
                         .allowedOrigins(
+                                "https://sparkling-pothos-038afc.netlify.app" ,
                                 "http://localhost:3000", // user frontend
                                 "http://localhost:5173"  // admin frontend
                         )
