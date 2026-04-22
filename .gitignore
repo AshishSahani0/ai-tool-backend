@@ -34,8 +34,6 @@ build/
 
 # Sensitive files
 src/main/resources/firebase-service.json
-src/main/resources/application.properties
-
 
 # Env
 .env
