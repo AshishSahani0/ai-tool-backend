@@ -1,5 +1,4 @@
 package com.example.backend;
-
 import com.example.backend.config.DotenvInitializer;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
