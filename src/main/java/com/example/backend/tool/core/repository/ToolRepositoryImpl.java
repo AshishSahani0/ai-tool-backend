@@ -83,9 +83,10 @@ public class ToolRepositoryImpl implements ToolRepositoryCustom {
             criteria.and("verified").is(verified);
         }
 
-        Query query = new Query(criteria).with(pageable);
+        Query countQuery = new Query(criteria);
+        long total = mongoTemplate.count(countQuery, Tool.class);
 
-        long total = mongoTemplate.count(query, Tool.class);
+        Query query = new Query(criteria).with(pageable);
         List<Tool> tools = mongoTemplate.find(query, Tool.class);
 
         List<ToolCardProjection> projections = tools.stream()

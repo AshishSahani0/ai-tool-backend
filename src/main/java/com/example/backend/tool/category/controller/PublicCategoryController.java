@@ -6,6 +6,7 @@ import com.example.backend.tool.category.dto.SubCategoryToolCount;
 import com.example.backend.tool.dto.SubCategoryWithCount;
 import com.example.backend.tool.category.service.CategoryService;
 import com.example.backend.tool.enums.ApprovalStatus;
+import com.example.backend.tool.subcategory.model.SubCategory;
 import com.example.backend.tool.subcategory.repository.SubCategoryRepository;
 import com.example.backend.tool.core.repository.ToolRepository;
 import lombok.RequiredArgsConstructor;
@@ -58,13 +59,15 @@ public class PublicCategoryController {
                                 SubCategoryToolCount::getCount
                         ));
 
+        List<SubCategory> allActiveSubs = subCategoryRepo.findByActiveTrueOrderByOrderAsc();
+        Map<String, List<SubCategory>> subsByCategory = allActiveSubs.stream()
+                .collect(Collectors.groupingBy(SubCategory::getCategoryId));
+
         return categoryService.all().stream()
                 .map(category -> {
 
-                    List<SubCategoryWithCount> subs =
-                            subCategoryRepo
-                                    .findByCategoryIdAndActiveTrueOrderByOrderAsc(category.id())
-                                    .stream()
+                    List<SubCategory> categorySubs = subsByCategory.getOrDefault(category.id(), List.of());
+                    List<SubCategoryWithCount> subs = categorySubs.stream()
                                     .map(sub -> new SubCategoryWithCount(
                                             sub.getId(),
                                             sub.getName(),

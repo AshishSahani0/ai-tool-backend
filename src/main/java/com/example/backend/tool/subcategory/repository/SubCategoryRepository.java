@@ -10,6 +10,8 @@ public interface SubCategoryRepository extends MongoRepository<SubCategory, Stri
 
     List<SubCategory> findByCategoryIdAndActiveTrueOrderByOrderAsc(String categoryId);
 
+    List<SubCategory> findByActiveTrueOrderByOrderAsc();
+
     Optional<SubCategory> findByCategoryIdAndSlugAndActiveTrue(String categoryId, String slug);
 
     boolean existsByCategoryIdAndSlug(String categoryId, String slug);

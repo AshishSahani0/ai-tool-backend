@@ -20,6 +20,6 @@ public class DotenvInitializer
             }
         });
 
-        System.out.println("✅ .env loaded BEFORE Spring Boot");
+        System.out.println(".env loaded BEFORE Spring Boot");
     }
 }
