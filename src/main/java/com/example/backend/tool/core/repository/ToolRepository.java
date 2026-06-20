@@ -70,5 +70,10 @@ public interface ToolRepository
             ApprovalStatus status
     );
 
+    List<Tool> findBySlugInAndApprovalStatusAndActiveTrue(
+            List<String> slugs,
+            ApprovalStatus status
+    );
+
 
 }
