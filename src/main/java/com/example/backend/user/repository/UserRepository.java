@@ -9,5 +9,7 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     Optional<User> findByFirebaseUid(String firebaseUid);
 
+    Optional<User> findByEmail(String email);
 
+    boolean existsByFirebaseUid(String firebaseUid);
 }

@@ -13,31 +13,37 @@ import java.net.URI;
 @Configuration
 public class R2Config {
 
-    @Value("${r2.access-key}")
+    @Value("${r2.access-key:}")
     private String accessKey;
 
-    @Value("${r2.secret-key}")
+    @Value("${r2.secret-key:}")
     private String secretKey;
 
-    @Value("${r2.endpoint}")
+    @Value("${r2.endpoint:}")
     private String endpoint;
 
-    @Value("${r2.region}")
+    @Value("${r2.region:auto}")
     private String region;
 
     // ONLY CREATE S3 CLIENT
     @Bean
     public S3Client s3Client() {
 
-        return S3Client.builder()
-                .region(Region.of(region)) // auto or us-east-1
-                .endpointOverride(URI.create(endpoint))
-                .credentialsProvider(
-                        StaticCredentialsProvider.create(
-                                AwsBasicCredentials.create(accessKey, secretKey)
-                        )
-                )
-                .build();
-    }
+        var builder = S3Client.builder()
+                .region(Region.of(region != null && !region.isBlank() ? region : "auto"));
 
+        if (endpoint != null && !endpoint.isBlank()) {
+            builder.endpointOverride(URI.create(endpoint));
+        }
+
+        if (accessKey != null && !accessKey.isBlank() && secretKey != null && !secretKey.isBlank()) {
+            builder.credentialsProvider(
+                    StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(accessKey, secretKey)
+                    )
+            );
+        }
+
+        return builder.build();
+    }
 }

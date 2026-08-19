@@ -1,10 +1,12 @@
 package com.example.backend.tool.user.controller;
 
 import com.example.backend.auth.security.AuthPrincipal;
+import com.example.backend.common.exception.UnauthorizedException;
 import com.example.backend.tool.dto.ToolResponse;
 import com.example.backend.tool.user.dto.ToolCreateRequest;
 import com.example.backend.tool.user.dto.UserToolResponse;
 import com.example.backend.tool.user.service.UserToolService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,11 +22,11 @@ public class UserToolController {
 
     @PostMapping
     public UserToolResponse submitTool(
-            @RequestBody ToolCreateRequest req,
+            @Valid @RequestBody ToolCreateRequest req,
             @AuthenticationPrincipal AuthPrincipal principal
     ) {
         if (principal == null) {
-            throw new RuntimeException("UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required to submit tools");
         }
 
         return service.submitTool(req, principal.getUid());
@@ -36,7 +38,7 @@ public class UserToolController {
             Pageable pageable
     ) {
         if (principal == null) {
-            throw new RuntimeException("UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required to view your tools");
         }
 
         return service.getMyTools(principal.getUid(), pageable);
@@ -48,7 +50,7 @@ public class UserToolController {
             @AuthenticationPrincipal AuthPrincipal principal
     ) {
         if (principal == null) {
-            throw new RuntimeException("UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required to view tool details");
         }
 
         return service.getMyToolById(id, principal.getUid());
@@ -57,11 +59,11 @@ public class UserToolController {
     @PutMapping("/{id}")
     public UserToolResponse updateMyTool(
             @PathVariable String id,
-            @RequestBody ToolCreateRequest req,
+            @Valid @RequestBody ToolCreateRequest req,
             @AuthenticationPrincipal AuthPrincipal principal
     ) {
         if (principal == null) {
-            throw new RuntimeException("UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required to update tools");
         }
 
         return service.updateMyTool(id, req, principal.getUid());

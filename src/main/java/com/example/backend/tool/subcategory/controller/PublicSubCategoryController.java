@@ -1,5 +1,6 @@
 package com.example.backend.tool.subcategory.controller;
 
+import com.example.backend.common.exception.ResourceNotFoundException;
 import com.example.backend.tool.core.repository.ToolRepositoryCustom;
 import com.example.backend.tool.core.repository.ToolCardProjection;
 import com.example.backend.tool.enums.ApprovalStatus;
@@ -51,6 +52,6 @@ public class PublicSubCategoryController {
                         sub.getSlug(),
                         sub.getOrder()
                 ))
-                .orElseThrow(() -> new RuntimeException("SubCategory not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("SubCategory not found with id: " + id));
     }
 }

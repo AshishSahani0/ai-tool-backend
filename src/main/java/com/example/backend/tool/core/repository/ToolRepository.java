@@ -40,6 +40,13 @@ public interface ToolRepository
             Pageable pageable
     );
 
+    long countBySubmittedByUserId(String userId);
+
+    long countBySubmittedByUserIdAndApprovalStatus(
+            String userId,
+            ApprovalStatus status
+    );
+
     Optional<Tool> findByIdAndSubmittedByUserId(
             String id,
             String userId
@@ -56,12 +63,16 @@ public interface ToolRepository
 
 
 
+    Page<ToolCardProjection> findBySubCategoryIdAndApprovalStatusAndActiveTrue(
+            String subCategoryId,
+            ApprovalStatus status,
+            Pageable pageable
+    );
+
     long countBySubCategoryIdAndApprovalStatusAndActiveTrue(
             String subCategoryId,
             ApprovalStatus status
     );
-
-
 
     boolean existsBySlug(String slug);
 

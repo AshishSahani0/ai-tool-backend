@@ -1,10 +1,13 @@
 package com.example.backend.user.model;
 
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -12,12 +15,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 @Builder
 @Document(collection = "users")
-@CompoundIndex(name = "email_idx", def = "{'email': 1}", unique = true)
 public class User {
 
     @Id
     private String id;
 
+    @Indexed(unique = true)
     private String firebaseUid;
 
     @Indexed(unique = true)
@@ -26,4 +29,10 @@ public class User {
 
     @Builder.Default
     private Role role = Role.USER;
+
+    @CreatedDate
+    private Instant createdAt;
+
+    @LastModifiedDate
+    private Instant updatedAt;
 }

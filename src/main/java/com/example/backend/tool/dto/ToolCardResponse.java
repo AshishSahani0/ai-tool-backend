@@ -2,6 +2,8 @@ package com.example.backend.tool.dto;
 
 import com.example.backend.tool.enums.PricingType;
 
+import java.util.List;
+
 public record ToolCardResponse(
         String slug,
         String name,
@@ -11,5 +13,7 @@ public record ToolCardResponse(
         double rating,
         int reviewsCount,
         int views,
-        boolean verified
+        boolean verified,
+        String website,
+        List<String> hashtags
 ) {}

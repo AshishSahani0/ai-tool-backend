@@ -1,5 +1,7 @@
 package com.example.backend.tool.public_.service;
 
+import com.example.backend.common.exception.BadRequestException;
+import com.example.backend.common.exception.ResourceNotFoundException;
 import com.example.backend.tool.core.model.Tool;
 import com.example.backend.tool.core.repository.ToolCardProjection;
 import com.example.backend.tool.core.repository.ToolRepository;
@@ -11,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.CriteriaDefinition;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
@@ -55,7 +56,7 @@ public class PublicToolService {
                         slug,
                         ApprovalStatus.APPROVED
                 )
-                .orElseThrow(() -> new RuntimeException("Tool not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tool not found with slug: " + slug));
 
         repo.incrementViews(tool.getId());
 
@@ -63,7 +64,39 @@ public class PublicToolService {
     }
 
     /* =====================================
-       FILTER TOOLS (Dynamic Query)
+       GET RELATED / ALTERNATIVE TOOLS
+       ===================================== */
+    public List<ToolCardResponse> getRelatedTools(String slug, int limit) {
+        Tool tool = repo.findBySlugAndApprovalStatusAndActiveTrue(
+                slug,
+                ApprovalStatus.APPROVED
+        ).orElse(null);
+
+        if (tool == null || tool.getSubCategoryId() == null) {
+            return List.of();
+        }
+
+        int safeLimit = Math.min(Math.max(limit, 1), 12);
+        Pageable pageable = PageRequest.of(
+                0,
+                safeLimit + 1,
+                Sort.by(Sort.Direction.DESC, "popularityScore")
+        );
+
+        return repo.findBySubCategoryIdAndApprovalStatusAndActiveTrue(
+                        tool.getSubCategoryId(),
+                        ApprovalStatus.APPROVED,
+                        pageable
+                )
+                .stream()
+                .filter(t -> !t.getSlug().equalsIgnoreCase(slug))
+                .limit(safeLimit)
+                .map(this::mapProjectionToCard)
+                .toList();
+    }
+
+    /* =====================================
+       FILTER TOOLS (Dynamic Query with Field Projections)
        ===================================== */
     public Page<ToolCardResponse> filterTools(
             String subCategoryId,
@@ -73,28 +106,23 @@ public class PublicToolService {
             int page,
             int size
     ) {
+        Criteria criteria = Criteria.where("approvalStatus").is(ApprovalStatus.APPROVED)
+                .and("active").is(true);
 
-        Query query = new Query();
-
-        query.addCriteria(Criteria.where("approvalStatus")
-                .is(ApprovalStatus.APPROVED));
-        query.addCriteria(Criteria.where("active").is(true));
-
-        if (subCategoryId != null) {
-            query.addCriteria(Criteria.where("subCategoryId").is(subCategoryId));
+        if (subCategoryId != null && !subCategoryId.isBlank()) {
+            criteria.and("subCategoryId").is(subCategoryId);
         }
 
-        if (pricingType != null) {
+        if (pricingType != null && !pricingType.isBlank()) {
             try {
-                query.addCriteria(Criteria.where("pricingType")
-                        .is(PricingType.valueOf(pricingType.toUpperCase())));
+                criteria.and("pricingType").is(PricingType.valueOf(pricingType.toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid pricing type");
+                throw new BadRequestException("Invalid pricing type: " + pricingType);
             }
         }
 
         if (verified != null) {
-            query.addCriteria(Criteria.where("verified").is(verified));
+            criteria.and("verified").is(verified);
         }
 
         if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
@@ -107,12 +135,23 @@ public class PublicToolService {
                 Sort.by(Sort.Direction.DESC, sortBy)
         );
 
-        query.with(pageable);
+        // Include only card fields to reduce MongoDB payload & deserialization cost
+        Query query = new Query(criteria).with(pageable);
+        query.fields()
+                .include("slug")
+                .include("name")
+                .include("shortDescription")
+                .include("logoKey")
+                .include("pricingType")
+                .include("rating")
+                .include("reviewsCount")
+                .include("views")
+                .include("verified")
+                .include("website")
+                .include("hashtags");
 
         List<Tool> tools = mongoTemplate.find(query, Tool.class);
-
-        Query countQuery = new Query((CriteriaDefinition) query.getQueryObject());
-        long total = mongoTemplate.count(countQuery, Tool.class);
+        long total = mongoTemplate.count(new Query(criteria), Tool.class);
 
         return new PageImpl<>(
                 tools.stream()
@@ -138,7 +177,9 @@ public class PublicToolService {
                 p.getRating(),
                 p.getReviewsCount(),
                 p.getViews(),
-                p.isVerified()
+                p.isVerified(),
+                p.getWebsite(),
+                p.getHashtags()
         );
     }
 
@@ -153,7 +194,9 @@ public class PublicToolService {
                 tool.getRating(),
                 tool.getReviewsCount(),
                 tool.getViews(),
-                tool.isVerified()
+                tool.isVerified(),
+                tool.getWebsite(),
+                tool.getHashtags()
         );
     }
 

@@ -3,6 +3,7 @@ package com.example.backend.tool.subcategory.model;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -20,12 +21,16 @@ public class SubCategory {
     @Id
     private String id;
 
+    @Indexed
     private String categoryId;
 
     private String name;
     private String slug;
 
+    @Indexed
     private int order;
+
+    @Indexed
     private boolean active;
 
     private Instant createdAt;

@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/user/media")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('USER')")
+@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 public class UserMediaController {
 
     private final R2UploadService uploadService;

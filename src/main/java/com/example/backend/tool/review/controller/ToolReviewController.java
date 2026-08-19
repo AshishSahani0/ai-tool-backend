@@ -2,10 +2,9 @@ package com.example.backend.tool.review.controller;
 
 import com.example.backend.auth.security.AuthPrincipal;
 import com.example.backend.tool.dto.ReviewRequest;
-import com.example.backend.tool.review.model.ToolReview;
+import com.example.backend.tool.dto.ReviewResponse;
 import com.example.backend.tool.review.service.ToolReviewService;
-import com.example.backend.user.model.User;
-import com.example.backend.user.repository.UserRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -18,38 +17,29 @@ import java.util.List;
 public class ToolReviewController {
 
     private final ToolReviewService reviewService;
-    private final UserRepository userRepository;
 
     @PostMapping("/{toolId}/reviews")
     public void addReview(
             @PathVariable String toolId,
-            @RequestBody ReviewRequest request,
+            @Valid @RequestBody ReviewRequest request,
             Authentication authentication
     ) {
-
         String userId = null;
-        String firebaseName = null;
+        String userName = null;
 
         if (authentication != null &&
                 authentication.getPrincipal() instanceof AuthPrincipal principal) {
-
             userId = principal.getUid();
-
-            // 🔥 Get REAL name from DB
-            User user = userRepository
-                    .findByFirebaseUid(userId)
-                    .orElse(null);
-
-            if (user != null) {
-                firebaseName = user.getName();
-            }
+            userName = principal.getName() != null && !principal.getName().isBlank()
+                    ? principal.getName()
+                    : principal.getEmail();
         }
 
-        reviewService.addReview(toolId, request, userId, firebaseName);
+        reviewService.addReview(toolId, request, userId, userName);
     }
 
     @GetMapping("/{toolId}/reviews")
-    public List<ToolReview> getReviews(
+    public List<ReviewResponse> getReviews(
             @PathVariable String toolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size

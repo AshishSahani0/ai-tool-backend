@@ -1,33 +1,30 @@
 package com.example.backend.compare.controller;
 
-import com.example.backend.tool.core.model.Tool;
-import com.example.backend.tool.core.repository.ToolRepository;
-import com.example.backend.tool.enums.ApprovalStatus;
+import com.example.backend.compare.dto.CompareToolResponse;
+import com.example.backend.compare.service.CompareService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/public/compare")
 @RequiredArgsConstructor
 public class CompareController {
 
-    private final ToolRepository toolRepository;
+    private final CompareService compareService;
 
     @GetMapping
-    public List<Tool> getComparisonTools(@RequestParam List<String> slugs) {
-        if (slugs == null || slugs.isEmpty()) {
-            return List.of();
-        }
-        // Limit comparison to maximum of 3 tools to preserve layout and backend processing bounds
-        List<String> limitedSlugs = slugs.stream()
-                .limit(3)
-                .toList();
+    public ResponseEntity<List<CompareToolResponse>> getComparisonTools(
+            @RequestParam(required = false) List<String> slugs
+    ) {
+        List<CompareToolResponse> result = compareService.getComparisonTools(slugs);
 
-        return toolRepository.findBySlugInAndApprovalStatusAndActiveTrue(
-                limitedSlugs,
-                ApprovalStatus.APPROVED
-        );
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(60, TimeUnit.SECONDS).cachePublic())
+                .body(result);
     }
 }

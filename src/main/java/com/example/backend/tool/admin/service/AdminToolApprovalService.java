@@ -1,5 +1,6 @@
 package com.example.backend.tool.admin.service;
 
+import com.example.backend.common.exception.ResourceNotFoundException;
 import com.example.backend.tool.enums.ApprovalStatus;
 import com.example.backend.tool.core.model.Tool;
 import com.example.backend.tool.core.repository.ToolRepository;
@@ -43,7 +44,7 @@ public class AdminToolApprovalService {
     public Tool approve(String toolId) {
 
         Tool tool = repo.findById(toolId)
-                .orElseThrow(() -> new RuntimeException("Tool not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tool not found with id: " + toolId));
 
         tool.setApprovalStatus(ApprovalStatus.APPROVED);
         tool.setActive(true);
@@ -61,7 +62,7 @@ public class AdminToolApprovalService {
     public Tool reject(String toolId, String reason) {
 
         Tool tool = repo.findById(toolId)
-                .orElseThrow(() -> new RuntimeException("Tool not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tool not found with id: " + toolId));
 
         tool.setApprovalStatus(ApprovalStatus.REJECTED);
         tool.setActive(false);

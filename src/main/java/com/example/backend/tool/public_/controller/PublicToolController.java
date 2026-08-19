@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/public/tools")
 @RequiredArgsConstructor
@@ -25,6 +27,14 @@ public class PublicToolController {
     @GetMapping("/{slug}")
     public ToolResponse bySlug(@PathVariable String slug) {
         return service.getBySlug(slug);
+    }
+
+    @GetMapping("/{slug}/related")
+    public List<ToolCardResponse> getRelatedTools(
+            @PathVariable String slug,
+            @RequestParam(defaultValue = "4") int limit
+    ) {
+        return service.getRelatedTools(slug, limit);
     }
 
     @GetMapping("/filter")

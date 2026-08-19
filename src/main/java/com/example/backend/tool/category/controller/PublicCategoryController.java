@@ -34,16 +34,26 @@ public class PublicCategoryController {
     public List<SubCategoryWithCount> subCategories(
             @PathVariable String categoryId
     ) {
-        return subCategoryRepo
-                .findByCategoryIdAndActiveTrueOrderByOrderAsc(categoryId)
-                .stream()
+        List<SubCategory> subs = subCategoryRepo
+                .findByCategoryIdAndActiveTrueOrderByOrderAsc(categoryId);
+
+        if (subs.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, Long> toolCounts =
+                toolRepo.countToolsBySubCategory(ApprovalStatus.APPROVED)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                SubCategoryToolCount::get_id,
+                                SubCategoryToolCount::getCount
+                        ));
+
+        return subs.stream()
                 .map(sub -> new SubCategoryWithCount(
                         sub.getId(),
                         sub.getName(),
-                        toolRepo.countBySubCategoryIdAndApprovalStatusAndActiveTrue(
-                                sub.getId(),
-                                ApprovalStatus.APPROVED
-                        )
+                        toolCounts.getOrDefault(sub.getId(), 0L)
                 ))
                 .toList();
     }

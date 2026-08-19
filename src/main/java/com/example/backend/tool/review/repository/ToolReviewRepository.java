@@ -10,4 +10,6 @@ public interface ToolReviewRepository extends MongoRepository<ToolReview, String
     Page<ToolReview> findByToolId(String toolId, Pageable pageable);
 
     boolean existsByToolIdAndUserId(String toolId, String userId);
+
+    long countByUserId(String userId);
 }

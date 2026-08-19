@@ -1,12 +1,14 @@
 package com.example.backend.config;
 
-
-import com.example.backend.auth.security.FirebaseTokenCache;
-import com.example.backend.auth.service.AuthService;
 import com.example.backend.auth.security.FirebaseAuthFilter;
+import com.example.backend.auth.security.FirebaseTokenCache;
+import com.example.backend.auth.security.RestAccessDeniedHandler;
+import com.example.backend.auth.security.RestAuthenticationEntryPoint;
+import com.example.backend.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -23,6 +25,8 @@ public class SecurityConfig {
 
     private final FirebaseTokenCache tokenCache;
     private final AuthService authService;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
 
     @Nullable
     private final RateLimitFilter rateLimitFilter;
@@ -44,10 +48,15 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/user/**").hasRole("USER")
+                        .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

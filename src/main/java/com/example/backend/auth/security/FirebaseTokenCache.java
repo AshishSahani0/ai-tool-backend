@@ -23,4 +23,14 @@ public class FirebaseTokenCache {
     public void put(String token, FirebaseToken decoded) {
         cache.put(token, decoded);
     }
+
+    public void evict(String token) {
+        if (token != null) {
+            cache.invalidate(token);
+        }
+    }
+
+    public void clear() {
+        cache.invalidateAll();
+    }
 }

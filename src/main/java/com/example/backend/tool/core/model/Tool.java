@@ -18,9 +18,26 @@ import java.util.List;
 
 @Document(collection = "tools")
 @CompoundIndexes({
+        @CompoundIndex(name = "slug_status_active_idx",
+                def = "{'slug':1,'approvalStatus':1,'active':1}"),
+
+        @CompoundIndex(name = "user_submitted_tools_idx",
+                def = "{'submittedByUserId':1,'createdAt':-1}"),
 
         @CompoundIndex(name = "approved_active_idx",
                 def = "{'approvalStatus':1,'active':1}"),
+
+        @CompoundIndex(name = "status_active_popularity_idx",
+                def = "{'approvalStatus':1,'active':1,'popularityScore':-1}"),
+
+        @CompoundIndex(name = "status_active_views_idx",
+                def = "{'approvalStatus':1,'active':1,'views':-1}"),
+
+        @CompoundIndex(name = "status_active_rating_idx",
+                def = "{'approvalStatus':1,'active':1,'rating':-1}"),
+
+        @CompoundIndex(name = "status_active_created_idx",
+                def = "{'approvalStatus':1,'active':1,'createdAt':-1}"),
 
         @CompoundIndex(name = "category_approved_active_idx",
                 def = "{'categoryId':1,'approvalStatus':1,'active':1}"),
@@ -28,13 +45,18 @@ import java.util.List;
         @CompoundIndex(name = "sub_approved_active_idx",
                 def = "{'subCategoryId':1,'approvalStatus':1,'active':1}"),
 
+        @CompoundIndex(name = "sub_status_views_idx",
+                def = "{'subCategoryId':1,'approvalStatus':1,'active':1,'views':-1}"),
+
+        @CompoundIndex(name = "sub_status_rating_idx",
+                def = "{'subCategoryId':1,'approvalStatus':1,'active':1,'rating':-1}"),
+
+        @CompoundIndex(name = "sub_status_created_idx",
+                def = "{'subCategoryId':1,'approvalStatus':1,'active':1,'createdAt':-1}"),
+
         @CompoundIndex(name = "views_idx", def = "{'views':-1}"),
-
         @CompoundIndex(name = "rating_idx", def = "{'rating':-1}"),
-
-        @CompoundIndex(name = "popularity_idx", def = "{'popularityScore':-1}"),
-
-
+        @CompoundIndex(name = "popularity_idx", def = "{'popularityScore':-1}")
 })
 @Getter
 @Setter
