@@ -10,6 +10,7 @@ import com.example.backend.tool.subcategory.model.SubCategory;
 import com.example.backend.tool.subcategory.repository.SubCategoryRepository;
 import com.example.backend.tool.core.repository.ToolRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,6 +60,7 @@ public class PublicCategoryController {
     }
 
     @GetMapping("/full")
+    @Cacheable(value = "categories_full")
     public List<CategoryWithSubsResponse> fullCategories() {
 
         Map<String, Long> toolCounts =

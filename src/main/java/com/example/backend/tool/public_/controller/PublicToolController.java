@@ -26,7 +26,9 @@ public class PublicToolController {
 
     @GetMapping("/{slug}")
     public ToolResponse bySlug(@PathVariable String slug) {
-        return service.getBySlug(slug);
+        ToolResponse tool = service.getBySlug(slug);
+        service.recordViewAsync(tool.id());
+        return tool;
     }
 
     @GetMapping("/{slug}/related")

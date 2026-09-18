@@ -9,6 +9,7 @@ import com.example.backend.tool.dto.ReviewResponse;
 import com.example.backend.tool.review.model.ToolReview;
 import com.example.backend.tool.review.repository.ToolReviewRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -23,6 +24,7 @@ public class ToolReviewService {
     private final ToolReviewRepository reviewRepo;
     private final ToolRepository toolRepository;
 
+    @CacheEvict(value = {"tool_by_slug", "tools_related"}, allEntries = true)
     public void addReview(
             String toolId,
             ReviewRequest request,
@@ -36,8 +38,10 @@ public class ToolReviewService {
             throw new BadRequestException("Rating must be between 1 and 5");
         }
 
-        if (request.comment() == null ||
-                request.comment().trim().length() < 5) {
+        String rawComment = request.comment() != null ? request.comment().trim() : "";
+        String sanitizedComment = sanitizeInput(rawComment);
+
+        if (sanitizedComment.length() < 5) {
             throw new BadRequestException("Comment must be at least 5 characters");
         }
 
@@ -63,12 +67,17 @@ public class ToolReviewService {
             throw new BadRequestException("Name is required");
         }
 
+        String sanitizedName = sanitizeInput(finalName);
+        if (sanitizedName.isBlank()) {
+            sanitizedName = "Anonymous User";
+        }
+
         ToolReview review = ToolReview.builder()
                 .toolId(toolId)
                 .userId(userId) // null for guests
-                .name(finalName.trim())
+                .name(sanitizedName)
                 .rating(request.rating())
-                .comment(request.comment().trim())
+                .comment(sanitizedComment)
                 .createdAt(Instant.now())
                 .build();
 
@@ -83,13 +92,21 @@ public class ToolReviewService {
             int page,
             int size
     ) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 50);
+
         return reviewRepo.findByToolId(
                 toolId,
                 PageRequest.of(
-                        page,
-                        size,
+                        safePage,
+                        safeSize,
                         Sort.by(Sort.Direction.DESC, "createdAt")
                 )
         ).map(ReviewResponse::fromEntity);
+    }
+
+    private String sanitizeInput(String input) {
+        if (input == null) return "";
+        return input.replaceAll("<[^>]*>", "").trim();
     }
 }

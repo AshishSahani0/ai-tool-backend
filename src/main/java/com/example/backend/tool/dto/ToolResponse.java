@@ -2,6 +2,7 @@ package com.example.backend.tool.dto;
 
 import com.example.backend.tool.enums.PricingType;
 
+import java.io.Serializable;
 import java.util.List;
 
 public record ToolResponse(
@@ -24,4 +25,7 @@ public record ToolResponse(
         int reviewsCount,
         int views,
         boolean verified
-) {}
+) implements Serializable {
+    private static final long serialVersionUID = 1L;
+}
+

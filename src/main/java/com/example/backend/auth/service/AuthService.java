@@ -31,6 +31,9 @@ public class AuthService {
         // 1. Check in-memory UserPrincipalCache for O(1) retrieval (<0.05ms)
         AuthPrincipal cached = userPrincipalCache.get(uid);
         if (cached != null) {
+            if (!cached.isActive()) {
+                throw new com.example.backend.common.exception.ForbiddenException("User account is deactivated");
+            }
             return cached;
         }
 
@@ -43,18 +46,23 @@ public class AuthService {
                         return userRepository.save(
                                 User.builder()
                                         .firebaseUid(uid)
-                                        .email(email != null ? email.toLowerCase().trim() : null)
+                                        .email(email != null && !email.isBlank() ? email.toLowerCase().trim() : null)
                                         .name(name != null && !name.isBlank() ? name.trim() : "User")
                                         .role(Role.USER)
+                                        .active(true)
                                         .build()
                         );
                     } catch (DuplicateKeyException e) {
                         log.warn("Concurrent user creation detected for UID: {}. Fetching existing user.", uid);
                         return userRepository.findByFirebaseUid(uid)
-                                .or(() -> email != null ? userRepository.findByEmail(email.toLowerCase().trim()) : java.util.Optional.empty())
+                                .or(() -> email != null && !email.isBlank() ? userRepository.findByEmail(email.toLowerCase().trim()) : java.util.Optional.empty())
                                 .orElseThrow(() -> new IllegalStateException("Failed to resolve user after race condition", e));
                     }
                 });
+
+        if (!user.isActive()) {
+            throw new com.example.backend.common.exception.ForbiddenException("User account is deactivated");
+        }
 
         // 3. Build enriched AuthPrincipal
         AuthPrincipal principal = AuthPrincipal.builder()
@@ -63,6 +71,7 @@ public class AuthService {
                 .email(user.getEmail())
                 .name(user.getName())
                 .role(user.getRole() != null ? user.getRole().name() : Role.USER.name())
+                .active(user.isActive())
                 .build();
 
         // 4. Cache in memory for subsequent requests

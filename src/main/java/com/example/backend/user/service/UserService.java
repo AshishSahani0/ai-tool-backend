@@ -90,6 +90,7 @@ public class UserService {
                 .email(saved.getEmail())
                 .name(saved.getName())
                 .role(saved.getRole() != null ? saved.getRole().name() : Role.USER.name())
+                .active(saved.isActive())
                 .build();
 
         userPrincipalCache.put(principal.getUid(), updatedPrincipal);

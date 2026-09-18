@@ -5,6 +5,7 @@ import com.example.backend.auth.security.FirebaseTokenCache;
 import com.example.backend.auth.security.RestAccessDeniedHandler;
 import com.example.backend.auth.security.RestAuthenticationEntryPoint;
 import com.example.backend.auth.service.AuthService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +15,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -27,6 +29,7 @@ public class SecurityConfig {
     private final AuthService authService;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
+    private final ObjectMapper objectMapper;
 
     @Nullable
     private final RateLimitFilter rateLimitFilter;
@@ -36,15 +39,21 @@ public class SecurityConfig {
 
     @Bean
     public FirebaseAuthFilter firebaseAuthFilter() {
-        return new FirebaseAuthFilter(tokenCache, authService);
+        return new FirebaseAuthFilter(tokenCache, authService, objectMapper);
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
+        FirebaseAuthFilter authFilter = firebaseAuthFilter();
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
+                .headers(headers -> headers
+                        .contentTypeOptions(Customizer.withDefaults())
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -60,12 +69,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(firebaseAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
 
+        // Place RateLimitFilter AFTER FirebaseAuthFilter so it can inspect verified user principals
         if (rateLimitEnabled && rateLimitFilter != null) {
-            http.addFilterBefore(rateLimitFilter, FirebaseAuthFilter.class);
+            http.addFilterAfter(rateLimitFilter, FirebaseAuthFilter.class);
         }
 
         return http.build();
     }
-}
+}

@@ -1,6 +1,7 @@
 package com.example.backend.auth.security;
 
 import com.example.backend.auth.service.AuthService;
+import com.example.backend.common.dto.ApiErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
@@ -19,10 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -30,7 +28,7 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
 
     private final FirebaseTokenCache tokenCache;
     private final AuthService authService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(
@@ -53,11 +51,11 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
         }
 
         try {
-
             FirebaseToken decoded = tokenCache.get(token);
 
             if (decoded == null) {
-                decoded = FirebaseAuth.getInstance().verifyIdToken(token);
+                // Verify ID token and check revocation status
+                decoded = FirebaseAuth.getInstance().verifyIdToken(token, true);
                 tokenCache.put(token, decoded);
             }
 
@@ -76,8 +74,8 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
                                     new SimpleGrantedAuthority(
                                             "ROLE_" + principal.getRole()
                                     )
-                            )
-                    );
+                                    )
+                            );
 
             SecurityContextHolder.getContext()
                     .setAuthentication(authentication);
@@ -86,20 +84,27 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
             log.warn("Firebase token validation failed for path {}: {}", request.getRequestURI(), e.getMessage());
             SecurityContextHolder.clearContext();
 
+            // If the path is public, do not reject unauthenticated/expired visitors; continue anonymously
+            String uri = request.getRequestURI();
+            if (uri != null && uri.startsWith("/api/public/")) {
+                chain.doFilter(request, response);
+                return;
+            }
+
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("status", HttpStatus.UNAUTHORIZED.value());
-            body.put("error", "UNAUTHORIZED");
-            body.put("message", "Invalid, expired, or revoked authentication token");
-            body.put("path", request.getRequestURI());
-            body.put("timestamp", Instant.now().toString());
+            ApiErrorResponse errorResponse = ApiErrorResponse.of(
+                    HttpStatus.UNAUTHORIZED.value(),
+                    "UNAUTHORIZED",
+                    "Invalid, expired, or revoked authentication token",
+                    uri
+            );
 
-            objectMapper.writeValue(response.getOutputStream(), body);
+            objectMapper.writeValue(response.getOutputStream(), errorResponse);
             return;
         }
 
         chain.doFilter(request, response);
     }
-}
+}

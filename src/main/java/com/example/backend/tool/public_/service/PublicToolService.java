@@ -14,10 +14,12 @@ import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -33,10 +35,12 @@ public class PublicToolService {
        LIST APPROVED TOOLS (Paginated)
        ===================================== */
     public Page<ToolCardResponse> listApprovedTools(int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 50);
 
         Pageable pageable = PageRequest.of(
-                page,
-                size,
+                safePage,
+                safeSize,
                 Sort.by(Sort.Direction.DESC, "popularityScore")
         );
 
@@ -48,24 +52,32 @@ public class PublicToolService {
     }
 
     /* =====================================
-       GET TOOL BY SLUG (Public Safe)
+       GET TOOL BY SLUG (Public Safe, Cached)
        ===================================== */
+    @Cacheable(value = "tool_by_slug", key = "#slug")
     public ToolResponse getBySlug(String slug) {
-
         Tool tool = repo.findBySlugAndApprovalStatusAndActiveTrue(
                         slug,
                         ApprovalStatus.APPROVED
                 )
                 .orElseThrow(() -> new ResourceNotFoundException("Tool not found with slug: " + slug));
 
-        repo.incrementViews(tool.getId());
-
         return mapEntityToResponse(tool);
     }
 
     /* =====================================
-       GET RELATED / ALTERNATIVE TOOLS
+       RECORD VIEW ASYNCHRONOUSLY
        ===================================== */
+    public void recordViewAsync(String toolId) {
+        if (toolId != null && !toolId.isBlank()) {
+            CompletableFuture.runAsync(() -> repo.incrementViews(toolId));
+        }
+    }
+
+    /* =====================================
+       GET RELATED / ALTERNATIVE TOOLS (Cached)
+       ===================================== */
+    @Cacheable(value = "tools_related", key = "#slug + '_' + #limit")
     public List<ToolCardResponse> getRelatedTools(String slug, int limit) {
         Tool tool = repo.findBySlugAndApprovalStatusAndActiveTrue(
                 slug,
@@ -106,6 +118,9 @@ public class PublicToolService {
             int page,
             int size
     ) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 50);
+
         Criteria criteria = Criteria.where("approvalStatus").is(ApprovalStatus.APPROVED)
                 .and("active").is(true);
 
@@ -115,7 +130,7 @@ public class PublicToolService {
 
         if (pricingType != null && !pricingType.isBlank()) {
             try {
-                criteria.and("pricingType").is(PricingType.valueOf(pricingType.toUpperCase()));
+                criteria.and("pricingType").is(PricingType.valueOf(pricingType.trim().toUpperCase()));
             } catch (IllegalArgumentException e) {
                 throw new BadRequestException("Invalid pricing type: " + pricingType);
             }
@@ -125,13 +140,13 @@ public class PublicToolService {
             criteria.and("verified").is(verified);
         }
 
-        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+        if (sortBy == null || !ALLOWED_SORT_FIELDS.contains(sortBy)) {
             sortBy = "popularityScore";
         }
 
         Pageable pageable = PageRequest.of(
-                page,
-                size,
+                safePage,
+                safeSize,
                 Sort.by(Sort.Direction.DESC, sortBy)
         );
 

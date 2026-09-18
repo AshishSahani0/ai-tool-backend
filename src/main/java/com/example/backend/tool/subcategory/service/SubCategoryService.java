@@ -5,6 +5,9 @@ import com.example.backend.tool.subcategory.dto.SubCategoryResponse;
 import com.example.backend.tool.subcategory.model.SubCategory;
 import com.example.backend.tool.subcategory.repository.SubCategoryRepository;
 import lombok.RequiredArgsConstructor;
+import com.example.backend.common.exception.ResourceNotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +20,7 @@ public class SubCategoryService {
 
     private final SubCategoryRepository repo;
 
+    @CacheEvict(value = {"categories_all", "categories_full", "subcategories_by_id"}, allEntries = true)
     public SubCategoryResponse create(SubCategoryRequest req) {
 
         SubCategory sub = SubCategory.builder()
@@ -31,6 +35,14 @@ public class SubCategoryService {
 
         SubCategory saved = repo.save(sub);
         return map(saved);
+    }
+
+    @Cacheable(value = "subcategories_by_id", key = "#id")
+    public SubCategoryResponse getById(String id) {
+        return repo.findById(id)
+                .filter(SubCategory::isActive)
+                .map(this::map)
+                .orElseThrow(() -> new ResourceNotFoundException("SubCategory not found with id: " + id));
     }
 
     private String generateUniqueSlug(String categoryId, String name) {

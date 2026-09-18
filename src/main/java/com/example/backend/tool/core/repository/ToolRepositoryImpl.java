@@ -87,24 +87,63 @@ public class ToolRepositoryImpl implements ToolRepositoryCustom {
         long total = mongoTemplate.count(countQuery, Tool.class);
 
         Query query = new Query(criteria).with(pageable);
+        query.fields()
+                .include("slug")
+                .include("name")
+                .include("shortDescription")
+                .include("logoKey")
+                .include("pricingType")
+                .include("rating")
+                .include("reviewsCount")
+                .include("views")
+                .include("verified")
+                .include("website")
+                .include("hashtags");
+
         List<Tool> tools = mongoTemplate.find(query, Tool.class);
 
         List<ToolCardProjection> projections = tools.stream()
-                .map(tool -> new ToolCardProjection() {
-                    @Override public String getSlug() { return tool.getSlug(); }
-                    @Override public String getName() { return tool.getName(); }
-                    @Override public String getShortDescription() { return tool.getShortDescription(); }
-                    @Override public String getLogoKey() { return tool.getLogoKey(); }
-                    @Override public com.example.backend.tool.enums.PricingType getPricingType() { return tool.getPricingType(); }
-                    @Override public double getRating() { return tool.getRating(); }
-                    @Override public int getReviewsCount() { return tool.getReviewsCount(); }
-                    @Override public int getViews() { return tool.getViews(); }
-                    @Override public boolean isVerified() { return tool.isVerified(); }
-                    @Override public String getWebsite() { return tool.getWebsite(); }
-                    @Override public List<String> getHashtags() { return tool.getHashtags(); }
-                })
-                .collect(java.util.stream.Collectors.toList());
+                .<ToolCardProjection>map(tool -> new SimpleToolCardProjection(
+                        tool.getSlug(),
+                        tool.getName(),
+                        tool.getShortDescription(),
+                        tool.getLogoKey(),
+                        tool.getPricingType(),
+                        tool.getRating(),
+                        tool.getReviewsCount(),
+                        tool.getViews(),
+                        tool.isVerified(),
+                        tool.getWebsite(),
+                        tool.getHashtags()
+                ))
+                .toList();
 
         return new PageImpl<>(projections, pageable, total);
+    }
+
+    private record SimpleToolCardProjection(
+            String slug,
+            String name,
+            String shortDescription,
+            String logoKey,
+            com.example.backend.tool.enums.PricingType pricingType,
+            double rating,
+            int reviewsCount,
+            int views,
+            boolean isVerified,
+            String website,
+            List<String> hashtags
+    ) implements ToolCardProjection {
+        @Override public String getSlug() { return slug; }
+        @Override public String getName() { return name; }
+        @Override public String getShortDescription() { return shortDescription; }
+        @Override public String getLogoKey() { return logoKey; }
+        @Override public com.example.backend.tool.enums.PricingType getPricingType() { return pricingType; }
+        @Override public double getRating() { return rating; }
+        @Override public int getReviewsCount() { return reviewsCount; }
+        @Override public int getViews() { return views; }
+        @Override public boolean isVerified() { return isVerified; }
+        @Override public String getWebsite() { return website; }
+        @Override public List<String> getHashtags() { return hashtags; }
     }
 }

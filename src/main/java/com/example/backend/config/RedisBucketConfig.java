@@ -14,9 +14,15 @@ import org.springframework.context.annotation.Configuration;
 )
 public class RedisBucketConfig {
 
+    @org.springframework.beans.factory.annotation.Value("${spring.data.redis.host:localhost}")
+    private String redisHost;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.data.redis.port:6379}")
+    private int redisPort;
+
     @Bean
     public RedisClient redisClient() {
-        return RedisClient.create("redis://localhost:6379");
+        return RedisClient.create("redis://" + redisHost + ":" + redisPort);
     }
 
     @Bean

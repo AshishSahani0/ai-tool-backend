@@ -1,8 +1,10 @@
 package com.example.backend.auth.security;
 
+import com.example.backend.common.dto.ApiErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -10,14 +12,12 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     public void handle(
@@ -29,15 +29,17 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", "FORBIDDEN");
-        body.put("message", accessDeniedException != null && accessDeniedException.getMessage() != null
+        String message = (accessDeniedException != null && accessDeniedException.getMessage() != null)
                 ? accessDeniedException.getMessage()
-                : "You do not have permission to access this resource");
-        body.put("path", request.getRequestURI());
-        body.put("timestamp", Instant.now().toString());
+                : "You do not have permission to access this resource";
 
-        objectMapper.writeValue(response.getOutputStream(), body);
+        ApiErrorResponse errorResponse = ApiErrorResponse.of(
+                HttpStatus.FORBIDDEN.value(),
+                "FORBIDDEN",
+                message,
+                request.getRequestURI()
+        );
+
+        objectMapper.writeValue(response.getOutputStream(), errorResponse);
     }
 }

@@ -7,6 +7,8 @@ import com.example.backend.tool.category.repository.CategoryRepository;
 
 import com.example.backend.media.service.R2UploadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +28,7 @@ public class CategoryService {
     /* =========================
        CREATE CATEGORY
        ========================= */
+    @CacheEvict(value = {"categories_all", "categories_full"}, allEntries = true)
     public CategoryResponse create(CategoryRequest req) {
 
         Category category = Category.builder()
@@ -45,6 +48,7 @@ public class CategoryService {
     /* =========================
        GET ALL ACTIVE
        ========================= */
+    @Cacheable(value = "categories_all")
     public List<CategoryResponse> all() {
         return repo.findByActiveTrueOrderByOrderAsc()
                 .stream()
@@ -55,6 +59,7 @@ public class CategoryService {
     /* =========================
        UPDATE IMAGE
        ========================= */
+    @CacheEvict(value = {"categories_all", "categories_full"}, allEntries = true)
     public CategoryResponse updateImage(String categoryId, MultipartFile file) {
 
         Category category = repo.findById(categoryId)

@@ -24,6 +24,9 @@ import java.util.List;
         @CompoundIndex(name = "user_submitted_tools_idx",
                 def = "{'submittedByUserId':1,'createdAt':-1}"),
 
+        @CompoundIndex(name = "user_submitted_status_idx",
+                def = "{'submittedByUserId':1,'approvalStatus':1}"),
+
         @CompoundIndex(name = "approved_active_idx",
                 def = "{'approvalStatus':1,'active':1}"),
 
@@ -53,6 +56,15 @@ import java.util.List;
 
         @CompoundIndex(name = "sub_status_created_idx",
                 def = "{'subCategoryId':1,'approvalStatus':1,'active':1,'createdAt':-1}"),
+
+        @CompoundIndex(name = "sub_status_popularity_idx",
+                def = "{'subCategoryId':1,'approvalStatus':1,'active':1,'popularityScore':-1}"),
+
+        @CompoundIndex(name = "sub_status_pricing_idx",
+                def = "{'subCategoryId':1,'approvalStatus':1,'active':1,'pricingType':1}"),
+
+        @CompoundIndex(name = "approved_active_subcategory_idx",
+                def = "{'approvalStatus':1,'active':1,'subCategoryId':1}"),
 
         @CompoundIndex(name = "views_idx", def = "{'views':-1}"),
         @CompoundIndex(name = "rating_idx", def = "{'rating':-1}"),

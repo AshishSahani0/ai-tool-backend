@@ -23,12 +23,15 @@ public class User {
     @Indexed(unique = true)
     private String firebaseUid;
 
-    @Indexed(unique = true)
+    @Indexed(unique = true, sparse = true)
     private String email;
     private String name;
 
     @Builder.Default
     private Role role = Role.USER;
+
+    @Builder.Default
+    private boolean active = true;
 
     @CreatedDate
     private Instant createdAt;
