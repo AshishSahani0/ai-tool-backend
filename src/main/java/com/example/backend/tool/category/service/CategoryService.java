@@ -5,6 +5,13 @@ import com.example.backend.tool.dto.CategoryRequest;
 import com.example.backend.tool.category.model.Category;
 import com.example.backend.tool.category.repository.CategoryRepository;
 
+import com.example.backend.tool.category.dto.CategoryWithSubsResponse;
+import com.example.backend.tool.category.dto.SubCategoryToolCount;
+import com.example.backend.tool.dto.SubCategoryWithCount;
+import com.example.backend.tool.enums.ApprovalStatus;
+import com.example.backend.tool.subcategory.model.SubCategory;
+import com.example.backend.tool.subcategory.repository.SubCategoryRepository;
+import com.example.backend.tool.core.repository.ToolRepository;
 import com.example.backend.media.service.R2UploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -16,12 +23,16 @@ import org.springframework.web.multipart.MultipartFile;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
 
     private final CategoryRepository repo;
+    private final SubCategoryRepository subCategoryRepo;
+    private final ToolRepository toolRepo;
     private final R2UploadService r2;
 
 
@@ -53,6 +64,48 @@ public class CategoryService {
         return repo.findByActiveTrueOrderByOrderAsc()
                 .stream()
                 .map(this::map)
+                .toList();
+    }
+
+    /* =========================
+       GET ALL WITH SUBCATEGORIES (CACHED)
+       ========================= */
+    @Cacheable(value = "categories_full")
+    public List<CategoryWithSubsResponse> fullCategories() {
+
+        Map<String, Long> toolCounts =
+                toolRepo.countToolsBySubCategory(ApprovalStatus.APPROVED)
+                        .stream()
+                        .filter(c -> c != null && c.get_id() != null && !c.get_id().isBlank())
+                        .collect(Collectors.toMap(
+                                SubCategoryToolCount::get_id,
+                                SubCategoryToolCount::getCount,
+                                (existing, replacement) -> existing
+                        ));
+
+        List<SubCategory> allActiveSubs = subCategoryRepo.findByActiveTrueOrderByOrderAsc();
+        Map<String, List<SubCategory>> subsByCategory = allActiveSubs.stream()
+                .filter(sub -> sub.getCategoryId() != null)
+                .collect(Collectors.groupingBy(SubCategory::getCategoryId));
+
+        return repo.findByActiveTrueOrderByOrderAsc().stream()
+                .map(category -> {
+                    List<SubCategory> categorySubs = subsByCategory.getOrDefault(category.getId(), List.of());
+                    List<SubCategoryWithCount> subs = categorySubs.stream()
+                            .map(sub -> new SubCategoryWithCount(
+                                    sub.getId(),
+                                    sub.getName(),
+                                    toolCounts.getOrDefault(sub.getId(), 0L)
+                            ))
+                            .toList();
+
+                    return new CategoryWithSubsResponse(
+                            category.getId(),
+                            category.getName(),
+                            category.getImageKey(),
+                            subs
+                    );
+                })
                 .toList();
     }
 

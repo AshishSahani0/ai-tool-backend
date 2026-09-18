@@ -17,7 +17,7 @@ public interface ToolRepository
         extends MongoRepository<Tool, String>, ToolRepositoryCustom {
 
     @Aggregation(pipeline = {
-            "{ $match: { approvalStatus: ?0, active: true } }",
+            "{ $match: { approvalStatus: ?0, active: true, subCategoryId: { $ne: null, $exists: true } } }",
             "{ $group: { _id: '$subCategoryId', count: { $sum: 1 } } }"
     })
     List<SubCategoryToolCount> countToolsBySubCategory(

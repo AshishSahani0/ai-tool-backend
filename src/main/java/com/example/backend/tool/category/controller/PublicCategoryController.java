@@ -10,9 +10,11 @@ import com.example.backend.tool.subcategory.model.SubCategory;
 import com.example.backend.tool.subcategory.repository.SubCategoryRepository;
 import com.example.backend.tool.core.repository.ToolRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,73 +29,50 @@ public class PublicCategoryController {
     private final ToolRepository toolRepo;
 
     @GetMapping
-    public List<CategoryResponse> categories() {
-        return categoryService.all();
+    public ResponseEntity<List<CategoryResponse>> categories() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
+                .body(categoryService.all());
     }
 
     @GetMapping("/{categoryId}/subcategories")
-    public List<SubCategoryWithCount> subCategories(
+    public ResponseEntity<List<SubCategoryWithCount>> subCategories(
             @PathVariable String categoryId
     ) {
         List<SubCategory> subs = subCategoryRepo
                 .findByCategoryIdAndActiveTrueOrderByOrderAsc(categoryId);
 
         if (subs.isEmpty()) {
-            return List.of();
+            return ResponseEntity.ok(List.of());
         }
 
         Map<String, Long> toolCounts =
                 toolRepo.countToolsBySubCategory(ApprovalStatus.APPROVED)
                         .stream()
+                        .filter(c -> c != null && c.get_id() != null && !c.get_id().isBlank())
                         .collect(Collectors.toMap(
                                 SubCategoryToolCount::get_id,
-                                SubCategoryToolCount::getCount
+                                SubCategoryToolCount::getCount,
+                                (existing, replacement) -> existing
                         ));
 
-        return subs.stream()
+        List<SubCategoryWithCount> result = subs.stream()
                 .map(sub -> new SubCategoryWithCount(
                         sub.getId(),
                         sub.getName(),
                         toolCounts.getOrDefault(sub.getId(), 0L)
                 ))
                 .toList();
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
+                .body(result);
     }
 
     @GetMapping("/full")
-    @Cacheable(value = "categories_full")
-    public List<CategoryWithSubsResponse> fullCategories() {
-
-        Map<String, Long> toolCounts =
-                toolRepo.countToolsBySubCategory(ApprovalStatus.APPROVED)
-                        .stream()
-                        .collect(Collectors.toMap(
-                                SubCategoryToolCount::get_id,
-                                SubCategoryToolCount::getCount
-                        ));
-
-        List<SubCategory> allActiveSubs = subCategoryRepo.findByActiveTrueOrderByOrderAsc();
-        Map<String, List<SubCategory>> subsByCategory = allActiveSubs.stream()
-                .collect(Collectors.groupingBy(SubCategory::getCategoryId));
-
-        return categoryService.all().stream()
-                .map(category -> {
-
-                    List<SubCategory> categorySubs = subsByCategory.getOrDefault(category.id(), List.of());
-                    List<SubCategoryWithCount> subs = categorySubs.stream()
-                                    .map(sub -> new SubCategoryWithCount(
-                                            sub.getId(),
-                                            sub.getName(),
-                                            toolCounts.getOrDefault(sub.getId(), 0L)
-                                    ))
-                                    .toList();
-
-                    return new CategoryWithSubsResponse(
-                            category.id(),
-                            category.name(),
-                            category.imageKey(),
-                            subs
-                    );
-                })
-                .toList();
+    public ResponseEntity<List<CategoryWithSubsResponse>> fullCategories() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic().staleWhileRevalidate(Duration.ofMinutes(10)))
+                .body(categoryService.fullCategories());
     }
 }
